@@ -1,72 +1,148 @@
 const express = require('express');
 
-//init app
+//Init app
 const app = express();
 
-//view location
+//Views location
 app.set('views',__dirname + '/views');
 
-//set template engine
-app.set('view engine', 'ejs');
+//Set template engine
+app.set('view engine','ejs');
 
-//setup MongoDb
-const MongoClient =require ('mongodb').MongoClient;
-const mongoUrl = 'mongodb://localhost:27017/todolist';
+//Body parser middlware
 
-//connecting to mongodb
-MongoClient .connect(mongoUrl, function(error , db)   {
-	if (error)
-	{
-		console.log(error);
-	}
+var bodyParser = require('body-parser');
 
+// Body parser middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: false}));
+
+//Setup MongoDB
+
+const MongoClient = require('mongodb').MongoClient;
+const mongoURL = 'mongodb://localhost:27017/todolist';
+const ObjectId = require('mongodb').ObjectId;
+
+//Connecting to MongoDB
+
+MongoClient.connect(mongoURL, function(err , db){
+    if(err)
+    {
+        console.log(err);
+    }
     else
     {
-    	console.log ('data base connected successfuly');
-     todos = db.collection('todos');   
-
+        console.log('Database connected successfuly!');
+        todos = db.collection('todos');
+        //'todos' emri i collectionit qe e krijum tani 
+        //todos e kena kriju pa ja shkru var perpara se e kena ba global se na vyn mu qas edhe prej jasht
     }
-     });
-//routes
-app.get('/',function(req, res){
-	res.render("index", {name: "Faqja Fillestare", title: "index"});
-
-});
-
-app.get('/todos/:id', function (req, res){
-	res.render('show');
-
-});
-
-app.post('/todos/add',function(req, res){
-	res.redirect('/');
-
 });
 
 
-app.get('/todos/edit/:id',function(req, res){
-	res.render('edit');
+//Routes
 
+app.get('/',function(req , res)
+{
+    todos.find().toArray(function(err, docs)
+    {
+        if(err)
+        {
+            console.log(err);
+        }
+        else
+        {
+            res.render("index",{docs: docs});
+        }
+    });
 });
 
 
 
 
-app.post('/todos/edit/:id',function(req, res){
-	res.redirect('/');
+app.get('/todos/:id',function(req , res)
+{
+    var id = ObjectId(req.params.id);
 
+    todos.findOne({_id: id},function(err , doc)
+        {
+            if(err)
+            {
+                console.log(err);
+            }
+            else
+            {
+                   res.render('show',{doc: doc});
+            }
+        });
+});
+
+app.post('/todos/add',function(req , res)
+{
+    todos.insert({title:req.body.title,description:req.body.description},function(err, result){
+        if(err)
+        {
+            console.log(err);
+        }
+        else
+        {
+            res.redirect('/');
+        }
+    });
 });
 
 
+app.get('/todos/edit/:id',function(req , res)
+{
+    var id = ObjectId(req.params.id);
+    todos.findOne({_id: id},function(err , doc)
+        {
+            if(err)
+            {
+                console.log(err);
+            }
+            else
+            {
+                   res.render('edit',{doc: doc});
+            }
+        });
+    
+});
 
-app.get('/todos/delte/:id',function(req, res){
-	res.redirect('/');
-
+app.post('/todos/update/:id',function(req , res){
+var id = ObjectId(req.params.id);
+todos.updateOne({_id: id}, {$set: {title:req.body.title,description: req.body.description}},
+ function(err, result) {
+if(err) {
+    console.log(err)
+ } else {
+    res.redirect('/');
+ }
+});
 });
 
 
-//running app
-app.listen(3000,function (){
-	console.log('App running at https://localhost:3000');
+app.get('/todos/delete/:id', function(req, res){
+    var id = ObjectId(req.params.id);
+    todos.deleteOne({_id:id}, function(err, result) {
+        if(err) {
+            console.log(err);
+        }else {
+            res.redirect("/");
+        }
+    });
+    
 });
 
+
+/*
+app.get('/manage',function(req , res)
+{
+    res.render('manage');
+    e kena pas ni manage.ejs ne folderin views
+});
+*/
+//Running app
+app.listen(3000,function () {
+    console.log('App running at http://localhost:3000');
+});
